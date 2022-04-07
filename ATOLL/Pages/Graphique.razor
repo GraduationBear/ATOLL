@@ -1,0 +1,209 @@
+﻿@page "/graphique"
+
+
+<h3>Graphique</h3>
+
+
+<label>
+    Choisir une antenne :
+</label>
+
+<div id="ensemble-gauche">
+
+
+<select class="form-select" aria-label="Default select example" id="antenne" @bind="@selected">
+    @if(ants != null)
+    {
+        @foreach (Antenne a in ants.GetListe())
+        {
+            var name = a.GetNom();
+            <option value=@name>@name</option>
+        }
+
+    }
+    else
+    {
+        <option>Pas chargé</option>
+    }
+
+    </select>
+
+
+
+
+<div id="tabgraph">
+
+    
+
+    <div id="table">
+        @if (selected != "none")
+        {
+            Data.Clear();
+            contenu = ants.SearchAntenneByName(selected).GetContent();
+        
+            <table class="table table-bordered" >
+                <thead>
+                    <tr>
+                        <th>AZ</th>
+                        <th>Amp</th>
+                        <th>Phase</th>
+                    </tr>
+                </thead>
+            @for(int i = 5; i < contenu.Length-1;i++)
+            {
+
+                 string pattern = @"([0-9\.\S])+";
+
+                 Regex rgx = new Regex(pattern);
+                 string str = contenu[i];
+
+                var ci = (CultureInfo)CultureInfo.CurrentCulture.Clone();
+                ci.NumberFormat.NumberDecimalSeparator = ".";
+
+                int az= int.Parse(rgx.Matches(str)[0].Value); 
+                float amp = float.Parse(rgx.Matches(str)[1].Value,ci);
+                float phase = float.Parse(rgx.Matches(str)[2].Value, ci);
+                <tbody>
+                    <tr>
+                        <td>@az</td>
+                        <td>@amp</td>
+                        <td>@phase</td>
+                    </tr>
+                </tbody>
+                Data.Add(new ChartData { X = az-180, Y =amp });
+                if (i == contenu.Length - 2)
+                {
+                    Data.Add(new ChartData { X = 180, Y = Data[0].GetY() });
+                }
+
+            }
+            </table>
+        }
+    </div>
+    <div id="chart">
+
+        @*Permet d'afficher le graphique Syncfusion*@
+        <SfChart Title="@selected" Palettes="@palettes">
+            <ChartPrimaryYAxis RangePadding="ChartRangePadding.Auto" Minimum="0" Maximum="1"/>
+            <ChartPrimaryXAxis  Minimum="-180" Maximum="180" Interval="30" RangePadding="ChartRangePadding.Auto"/>
+            
+            <ChartSeriesCollection>
+                 
+                <ChartSeries DataSource="@Data" XName="X" YName="Y"/>
+            </ChartSeriesCollection>
+        </SfChart>
+    </div>
+</div>
+</div>
+@code {
+
+    //Classe Antenne ayant un Nom, un Chemin et un Contenu
+    internal class Antenne
+    {
+
+        //Attributs
+        private string Nom { get; set; }
+        private string Path { get; set; }
+        private string[] Contenu { get; set; }
+
+
+        //Constructeur de la classe Antenne
+        public Antenne(string nom, string path, string[] contenu)
+        {
+            this.Nom = nom;
+            this.Path = path;
+            this.Contenu = contenu;
+
+        }
+
+        public string GetNom()
+        {
+            return this.Nom;
+        }
+
+        public string GetPath()
+        {
+            return this.Path;
+        }
+
+        public string[] GetContent()
+        {
+            return this.Contenu;
+        }
+
+
+    }
+
+
+    //Classe Antennes : stocke les Antennes présente dans le dossier sous forme d'une liste d'antenne
+    internal class Antennes
+    {
+
+        private const string folderPath = @"C:\Users\DME\source\repos\ATOLL\ATOLL\Resources\Antennas\Antenna types";
+        private List<Antenne> l { get; set; }
+
+        //Constructeur de Antennes
+        public Antennes()
+        {
+            DirectoryInfo place = new DirectoryInfo(folderPath);
+            FileInfo[] files = place.GetFiles();
+            l = new List<Antenne>();
+            foreach(FileInfo file in files)
+            {
+                string filePath = folderPath + "\\" + file.Name;
+                
+                Antenne x = new Antenne(file.Name, filePath, System.IO.File.ReadAllLines(filePath));
+                l.Add(x);
+
+            }
+        }
+
+        //getter de la Liste
+        public List<Antenne> GetListe()
+        {
+            return this.l;
+        }
+
+
+        //Méthode permettant de rechercher une antenne avec son Nom
+        public Antenne SearchAntenneByName(string nom)
+        {
+            foreach(Antenne a in this.l)
+            {
+                if (a.GetNom()==nom)
+                {
+                    return a;
+                }
+            }
+            return null;
+        }
+    }
+
+    private string selected = "none";
+    private string[] contenu;
+    private Antennes ants = new Antennes();
+
+    //Classe représentant les points X et Y du Graphique    
+    public class ChartData
+    {
+        public int X { get; set;}
+        public float Y { get; set; }
+
+
+        public float GetY()
+        {
+            return this.Y;
+        }
+    }
+
+    //Une lsite stockant tout les points du Graphique
+    public List<ChartData> Data = new List<ChartData>();
+
+    
+
+    public String[] palettes = new String[] { "#E94649", "#F6B53F", "#6FAAB0" };
+    
+    
+}
+
+  
