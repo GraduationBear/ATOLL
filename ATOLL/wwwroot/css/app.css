@@ -63,12 +63,12 @@ a, .btn-link {
 		content: "An error has occurred."
 	}
 
-#tabgraph{
+#tabgraph {
 	display: flex;
 	flex-direction: row;
-	justify-content:center;
-	height:500px;
-	width:65%;
+	justify-content: center;
+    height: 75vh;
+    
 }
 
 #table{
@@ -90,3 +90,18 @@ a, .btn-link {
 .form-select{
 	margin-bottom: 20px;
 }
+#ensemble {
+    width: 100%;
+}
+
+#haut {
+    display: flex;
+    flex-direction: row;	
+    justify-content: space-between;
+}
+
+#antenne {
+    width: 20%;
+}
+
+

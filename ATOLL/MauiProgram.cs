@@ -19,7 +19,7 @@ public static class MauiProgram
 			{
 				fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
 			});
-		builder.Services.AddSyncfusionBlazor(options => { options.IgnoreScriptIsolation = true; });
+		builder.Services.AddSyncfusionBlazor();
 		builder.Services.AddBlazorWebView();
 		builder.Services.AddSingleton<WeatherForecastService>();
 		

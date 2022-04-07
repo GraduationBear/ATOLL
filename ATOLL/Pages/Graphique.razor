@@ -1,111 +1,126 @@
 ﻿@page "/graphique"
 
 
-<h3>Graphique</h3>
 
 
-<label>
-    Choisir une antenne :
-</label>
 
-<div id="ensemble-gauche">
+<div id="ensemble">
+    <div id="haut">
+        <select class="form-select form-select-sm" aria-label=".form-select-sm example" id="antenne" @bind="@selected">
+                
+                @foreach (Antenne a in ants.GetListe())
+                {
+                    var name = a.GetNom();
+                    <option value=@name>@name</option>
+                }
+            
+        </select>
+        <div id="onglets">
+            <nav>
+                @if (this.bo)
+                {
+                    <button class="btn btn-primary" @onclick="clickBtnChange">Polaire</button>
+                }
+                else
+                {
+                    <button class="btn btn-primary" @onclick="clickBtnChange">Cartesien</button>
+                }
+            </nav>
+        </div>
+    </div>
+    <div id="tabgraph" class="border-top-0">
+        <div id="table">
+            @if (selected != null)
+            {
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>AZ</th>
+                            <th>Amp</th>
+                            <th>Phase</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (Point p in ants.SearchAntenneByName(selected).GetRawData())
+                    {
+                        <tr>
+                            
+                            
+                            <td>@p.GetX()</td>
+                            <td>@p.GetY()</td>
+                            <td>@p.GetZ()</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            }
+        </div>
+        <div id="chart">
+            @if(this.bo & selected!=null){
+                <SfChart Title="@selected" Palettes="@palettes">
+                    <ChartPrimaryXAxis Minimum="-180" Maximum="180" Interval="30" RangePadding="ChartRangePadding.Auto" CrossesAt="0"/>
+                    <ChartPrimaryYAxis RangePadding="ChartRangePadding.Auto" Minimum="0" Maximum="1" CrossesAt="0"/>
 
 
-<select class="form-select" aria-label="Default select example" id="antenne" @bind="@selected">
-    @if(ants != null)
+                    <ChartSeriesCollection>
+                        @if (selected != null)
+                        {
+                            <ChartSeries DataSource="@ants.SearchAntenneByName(selected).GetChartCartData()" XName="X" YName="Y"/>
+                        }
+                        else
+                        {
+                            <ChartSeries XName="X" YName="Y"/>
+                        }
+
+                    </ChartSeriesCollection>
+                </SfChart>
+            }
+            else if(!this.bo & selected!=null)
+            {
+                <SfChart Title="@selected" Palettes="@palettes">
+                    <ChartPrimaryXAxis StartAngle="90" Minimum="0" Maximum="360" Interval="30"> </ChartPrimaryXAxis>
+                    <ChartPrimaryYAxis  Minimum="0" Maximum="1"/>
+                    <ChartSeriesCollection>
+                        <ChartSeries DataSource="@ants.SearchAntenneByName(selected).GetRawData()" XName="X" Width="2" Opacity="1" YName="Y"
+                                     Type="ChartSeriesType.Polar" DrawType="ChartDrawType.Spline">
+
+                        </ChartSeries>
+                    </ChartSeriesCollection>
+                </SfChart>
+            }
+            
+
+        </div>
+    </div>
+</div>
+
+
+@code {
+
+    private bool bo = true;
+    private static Antennes ants = new Antennes();
+
+    private string selected = Graphique.ants.GetListe()[0].GetNom();
+    public String[] palettes = new String[] { "#E94649", "#F6B53F", "#6FAAB0" };
+    
+    public void clickBtnChange()
     {
-        @foreach (Antenne a in ants.GetListe())
-        {
-            var name = a.GetNom();
-            <option value=@name>@name</option>
-        }
-
-    }
-    else
-    {
-        <option>Pas chargé</option>
+        this.bo = !bo;
     }
 
-    </select>
-
-
-
-
-<div id="tabgraph">
 
     
-
-    <div id="table">
-        @if (selected != "none")
-        {
-            Data.Clear();
-            contenu = ants.SearchAntenneByName(selected).GetContent();
-        
-            <table class="table table-bordered" >
-                <thead>
-                    <tr>
-                        <th>AZ</th>
-                        <th>Amp</th>
-                        <th>Phase</th>
-                    </tr>
-                </thead>
-            @for(int i = 5; i < contenu.Length-1;i++)
-            {
-
-                 string pattern = @"([0-9\.\S])+";
-
-                 Regex rgx = new Regex(pattern);
-                 string str = contenu[i];
-
-                var ci = (CultureInfo)CultureInfo.CurrentCulture.Clone();
-                ci.NumberFormat.NumberDecimalSeparator = ".";
-
-                int az= int.Parse(rgx.Matches(str)[0].Value); 
-                float amp = float.Parse(rgx.Matches(str)[1].Value,ci);
-                float phase = float.Parse(rgx.Matches(str)[2].Value, ci);
-                <tbody>
-                    <tr>
-                        <td>@az</td>
-                        <td>@amp</td>
-                        <td>@phase</td>
-                    </tr>
-                </tbody>
-                Data.Add(new ChartData { X = az-180, Y =amp });
-                if (i == contenu.Length - 2)
-                {
-                    Data.Add(new ChartData { X = 180, Y = Data[0].GetY() });
-                }
-
-            }
-            </table>
-        }
-    </div>
-    <div id="chart">
-
-        @*Permet d'afficher le graphique Syncfusion*@
-        <SfChart Title="@selected" Palettes="@palettes">
-            <ChartPrimaryYAxis RangePadding="ChartRangePadding.Auto" Minimum="0" Maximum="1"/>
-            <ChartPrimaryXAxis  Minimum="-180" Maximum="180" Interval="30" RangePadding="ChartRangePadding.Auto"/>
-            
-            <ChartSeriesCollection>
-                 
-                <ChartSeries DataSource="@Data" XName="X" YName="Y"/>
-            </ChartSeriesCollection>
-        </SfChart>
-    </div>
-</div>
-</div>
-@code {
 
     //Classe Antenne ayant un Nom, un Chemin et un Contenu
     internal class Antenne
     {
-
         //Attributs
         private string Nom { get; set; }
         private string Path { get; set; }
         private string[] Contenu { get; set; }
-
+        
+        private List<Point> RawData;
+        private List<Point> ChartCartData;
 
         //Constructeur de la classe Antenne
         public Antenne(string nom, string path, string[] contenu)
@@ -113,7 +128,51 @@
             this.Nom = nom;
             this.Path = path;
             this.Contenu = contenu;
+            this.RawData = new List<Point>();
+            this.ChartCartData = new List<Point>();
+            
+            //remplissage du tableau brut
+            for (int i = 5; i < this.Contenu.Length - 1; i++)
+            {
 
+                string pattern = @"([0-9\.\S])+";
+                Regex rgx = new Regex(pattern);
+                string str = this.Contenu[i];
+                var ci = (CultureInfo) CultureInfo.CurrentCulture.Clone();
+                ci.NumberFormat.NumberDecimalSeparator = ".";
+
+                double az = double.Parse(rgx.Matches(str)[0].Value);
+                double amp = double.Parse(rgx.Matches(str)[1].Value, ci);
+                double phase = double.Parse(rgx.Matches(str)[2].Value, ci);
+
+                RawData.Add(new Point {X = az, Y = amp , Z= phase});
+
+                if (i == this.Contenu.Length - 2)
+                {
+                    RawData.Add(new Point {X = 360, Y = RawData[0].GetY() , Z=phase});
+                }
+            }
+
+            //Remplissage du tableau cartesien
+            for (int i = 0; i < RawData.Count()-1;i++)
+            {
+                int milieu = (RawData.Count() - 1) / 2;
+                if (i < milieu)
+                {
+                    ChartCartData.Add(new Point {X = RawData[i].GetX()-180, Y = RawData[milieu+i].GetY() , Z= RawData[milieu+i].GetZ()});
+                }
+                else
+                {
+                    if (i == RawData.Count() - 2)
+                    {
+                        ChartCartData.Add(new Point {X = 180, Y = RawData[milieu].GetY(), Z = RawData[0].GetZ()});
+                    }
+                    else
+                    {
+                        ChartCartData.Add(new Point {X = RawData[i].GetX()-180, Y = RawData[i-milieu].GetY() , Z= RawData[i-milieu].GetZ()});
+                    }
+                }
+            }
         }
 
         public string GetNom()
@@ -131,6 +190,15 @@
             return this.Contenu;
         }
 
+        public List<Point> GetRawData()
+        {
+            return this.RawData;
+        }
+
+        public List<Point> GetChartCartData()
+        {
+            return this.ChartCartData;
+        }
 
     }
 
@@ -141,10 +209,12 @@
 
         private const string folderPath = @"C:\Users\DME\source\repos\ATOLL\ATOLL\Resources\Antennas\Antenna types";
         private List<Antenne> l { get; set; }
+        
 
         //Constructeur de Antennes
         public Antennes()
         {
+            
             DirectoryInfo place = new DirectoryInfo(folderPath);
             FileInfo[] files = place.GetFiles();
             l = new List<Antenne>();
@@ -154,8 +224,8 @@
                 
                 Antenne x = new Antenne(file.Name, filePath, System.IO.File.ReadAllLines(filePath));
                 l.Add(x);
-
             }
+            
         }
 
         //getter de la Liste
@@ -179,31 +249,35 @@
         }
     }
 
-    private string selected = "none";
-    private string[] contenu;
-    private Antennes ants = new Antennes();
 
     //Classe représentant les points X et Y du Graphique    
-    public class ChartData
+    internal class Point
     {
-        public int X { get; set;}
-        public float Y { get; set; }
+        public double X { get; set;}
+        public double Y { get; set; }
+        public double Z { get; set; }
 
+        public double GetX()
+        {
+            return this.X;
+        }
 
-        public float GetY()
+        public double GetY()
         {
             return this.Y;
         }
+
+        public double GetZ()
+        {
+            return this.Z;
+        }
     }
 
-    //Une lsite stockant tout les points du Graphique
-    public List<ChartData> Data = new List<ChartData>();
+    
+    
+    
+   
 
-    
-
-    public String[] palettes = new String[] { "#E94649", "#F6B53F", "#6FAAB0" };
-    
-    
 }
 
   
