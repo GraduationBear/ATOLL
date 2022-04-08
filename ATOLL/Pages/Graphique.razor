@@ -1,5 +1,6 @@
 ﻿@page "/graphique"
 
+
 <div id="ensemble">
     <div id="haut">
         <select class="form-select form-select-sm" aria-label=".form-select-sm example" id="antenne" @bind="@this.selected" @onclick="SetTabRaw">
@@ -32,22 +33,24 @@
             {
                 <table class="table table-bordered">
                     <thead>
-                    <tr>
-                        <th>AZ</th>
-                        <th>Amp</th>
-                        <th>Phase</th>
-                    </tr>
+                        <tr>
+                            <th>AZ</th>
+                            <th>Amp</th>
+                            <th>Phase</th>
+                        </tr>
                     </thead>
                     <tbody>
-                    @*Affichage du tableau de données représentant le graphique à côté*@
-                    @for(int i=0;i<tableauRaw.Count()-1;i++)
-                    {
-                        <tr>
-                            <td><input @bind-value="@tableauRaw[i].X" @bind-value:event="onchange"></td>
-                            <td><input @bind-value="@tableauRaw[i].Y" @bind-value:event="onchange"></td>
-                            <td><input @bind-value="@tableauRaw[i].Z" @bind-value:event="onchange"></td> 
-                        </tr>
-                    }
+                        @*Affichage du tableau de données représentant le graphique à côté*@
+                        @for(int i=0;i<tableauRaw.Count()-1;i++)
+                        {
+                            <tr>
+                                    
+                                    <td><input type="text" value="@tableauRaw[i].X" @oninput="@(e => change(e,i, "X"))"></td>
+                                    <td><input type="text" value="@tableauRaw[i].Y" @oninput="@(e => change(e,i, "Y"))"></td>
+                                    <td><input type="text" value="@tableauRaw[i].Z" @oninput="@(e => change(e,i, "Z"))"></td> 
+                                
+                            </tr>
+                        }
                     </tbody>
                 </table>
             }
@@ -57,18 +60,18 @@
             @*Affichage du graphique selectionné*@
             @if (this.bo & (this.selected != null))
             {
-                <SfChart Title="@this.selected" Palettes="@palettes">
+                <SfChart @ref="Chart" Title="@this.selected" Palettes="@palettes">
                     <ChartPrimaryXAxis Minimum="-180" Maximum="180" Interval="30" RangePadding="ChartRangePadding.Auto" CrossesAt="0"/>
                     <ChartPrimaryYAxis RangePadding="ChartRangePadding.Auto" Minimum="0" Maximum="1" CrossesAt="0"/>
 
                     <ChartSeriesCollection>
                         @if (this.selected != null)
                         {
-                            <ChartSeries DataSource="@Graphique.TransformRawToCart(tableauRaw)" XName="X" YName="Y"/>
+                            <Syncfusion.Blazor.Charts.ChartSeries DataSource="@Graphique.TransformRawToCart(tableauRaw)" XName="X" YName="Y"/>
                         }
                         else
                         {
-                            <ChartSeries XName="X" YName="Y"/>
+                            <Syncfusion.Blazor.Charts.ChartSeries XName="X" YName="Y"/>
                         }
 
                     </ChartSeriesCollection>
@@ -76,14 +79,14 @@
             }
             else if (!this.bo & (this.selected != null))
             {
-                <SfChart Title="@this.selected" Palettes="@palettes">
+                <SfChart @ref="Chart" Title="@this.selected" Palettes="@palettes">
                     <ChartPrimaryXAxis StartAngle="90" Minimum="0" Maximum="360" Interval="30"> </ChartPrimaryXAxis>
                     <ChartPrimaryYAxis Minimum="0" Maximum="1"/>
                     <ChartSeriesCollection>
-                        <ChartSeries DataSource="@tableauRaw" XName="X" Width="2" Opacity="1" YName="Y"
+                        <Syncfusion.Blazor.Charts.ChartSeries DataSource="@tableauRaw" XName="X" Width="2" Opacity="1" YName="Y"
                                      Type="ChartSeriesType.Polar" DrawType="ChartDrawType.Spline">
 
-                        </ChartSeries>
+                        </Syncfusion.Blazor.Charts.ChartSeries>
                     </ChartSeriesCollection>
                 </SfChart>
             }
@@ -94,6 +97,31 @@
 
 
 @code {
+
+
+
+    SfChart Chart; 
+
+    public void change(ChangeEventArgs e, int i, string val)
+    {
+        var result = e.Value;
+        var ci = (CultureInfo) CultureInfo.CurrentCulture.Clone();
+        ci.NumberFormat.NumberDecimalSeparator = ".";
+        if(val == "X")
+        {
+            tableauRaw[i].SetX(Convert.ToDouble(e.Value,ci));
+        }else if(val == "Y")
+        {
+            tableauRaw[i].SetY(Convert.ToDouble(e.Value,ci));
+        }else if(val == "Z")
+        {
+            tableauRaw[i].SetZ(Convert.ToDouble(e.Value,ci));
+        }
+        Chart.RefreshLiveData(); 
+        
+        
+    }
+
     //Attribut TRUE : cartesien FALSE : polaire
     private bool bo = true;
 
@@ -108,29 +136,6 @@
 
     //Palette de couleur des graphiques
     public String[] palettes = new String[] { "#E94649", "#F6B53F", "#6FAAB0" };
-    
-    //Compteur pour savoir la ligne à modifier
-    private int c = 0;
-    private string text = "disabled";
-    private bool enabled = false;
-
-    //Modification activé/ pas activé 
-
-    public void setEnabled()
-    {
-        if (!enabled)
-        {
-            this.enabled = !this.enabled;
-        }
-        if (enabled)
-        {
-            this.text = "";
-        }
-        else
-        {
-            this.text = "disabled";
-        }
-    }
 
 
     //Méthode s'activant à l'appui du boutton Polar/Cartesian
@@ -189,7 +194,7 @@
         private string Nom { get; set; }
         private string Path { get; set; }
         private string[] Contenu { get; set; }
-        
+
         private List<Point> RawData;
         private List<Point> ChartCartData;
 
@@ -201,7 +206,7 @@
             this.Contenu = contenu;
             this.RawData = new List<Point>();
             this.ChartCartData = new List<Point>();
-            
+
             //remplissage du tableau brut
             for (int i = 5; i < this.Contenu.Length - 1; i++)
             {
@@ -212,7 +217,7 @@
                 var ci = (CultureInfo) CultureInfo.CurrentCulture.Clone();
                 ci.NumberFormat.NumberDecimalSeparator = ".";
 
-                double az = double.Parse(rgx.Matches(str)[0].Value);
+                double az = double.Parse(rgx.Matches(str)[0].Value, ci);
                 double amp = double.Parse(rgx.Matches(str)[1].Value, ci);
                 double phase = double.Parse(rgx.Matches(str)[2].Value, ci);
 
@@ -276,15 +281,13 @@
     //Classe Antennes : stocke les Antennes présente dans le dossier sous forme d'une liste d'antenne
     public class Antennes
     {
-
-        private const string folderPath = @"C:\Users\DME\source\repos\ATOLL\ATOLL\Resources\Antennas\Antenna types";
+        private const string folderPath = @"C:\Users\User\Source\Repos\GraduationBear\ATOLL\ATOLL\Resources\Antennas\Antenna types";
         private List<Antenne> l { get; set; }
-        
-        
+
+
         //Constructeur de Antennes
         public Antennes()
         {
-            
             DirectoryInfo place = new DirectoryInfo(folderPath);
             FileInfo[] files = place.GetFiles();
             this.l = new List<Antenne>();
@@ -294,8 +297,6 @@
                 Antenne x = new Antenne(file.Name, filePath, System.IO.File.ReadAllLines(filePath));
                 l.Add(x);
             }
-            
-
         }
 
         //getter de la Liste
@@ -321,9 +322,7 @@
         {
             return this.l[0];
         }
-       
     }
-
 
     //Classe représentant les points X et Y du Graphique . Z représente la Phase
     public class Point
@@ -353,7 +352,7 @@
 
         public void SetY(double y)
         {
-           this.Y=y;
+            this.Y=y;
         }
 
         public void SetZ(double z)

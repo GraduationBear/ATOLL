@@ -1,3 +1,4 @@
-﻿window.onload = function () {
-    alert("cc");
-};
+﻿
+document.getElementById("#caca").addEventListener('click', () => {
+    this.inner
+})
