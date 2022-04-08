@@ -1,22 +1,18 @@
 ﻿@page "/graphique"
 
-
-
-
-
 <div id="ensemble">
     <div id="haut">
-        <select class="form-select form-select-sm" aria-label=".form-select-sm example" id="antenne" @bind="@selected">
-                
-                @foreach (Antenne a in ants.GetListe())
+        <select class="form-select form-select-sm" aria-label=".form-select-sm example" id="antenne" @bind="@this.selected" @onclick="SetTabRaw">
+                @*Affichage des fichiers dans le menu déroulant*@
+                @foreach (Antenne a in Graphique.ants.GetListe())
                 {
-                    var name = a.GetNom();
-                    <option value=@name>@name</option>
+                    <option value="@a.GetNom()">@a.GetNom()</option>
                 }
             
         </select>
         <div id="onglets">
             <nav>
+                @*Affichage du bouton en fonction du contexte*@
                 @if (this.bo)
                 {
                     <button class="btn btn-primary" @onclick="clickBtnChange">Polaire</button>
@@ -30,25 +26,26 @@
     </div>
     <div id="tabgraph" class="border-top-0">
         <div id="table">
-            @if (selected != null)
+            
+
+            @if (this.selected != null)
             {
                 <table class="table table-bordered">
                     <thead>
-                        <tr>
-                            <th>AZ</th>
-                            <th>Amp</th>
-                            <th>Phase</th>
-                        </tr>
+                    <tr>
+                        <th>AZ</th>
+                        <th>Amp</th>
+                        <th>Phase</th>
+                    </tr>
                     </thead>
                     <tbody>
-                    @foreach (Point p in ants.SearchAntenneByName(selected).GetRawData())
+                    @*Affichage du tableau de données représentant le graphique à côté*@
+                    @for(int i=0;i<tableauRaw.Count()-1;i++)
                     {
                         <tr>
-                            
-                            
-                            <td>@p.GetX()</td>
-                            <td>@p.GetY()</td>
-                            <td>@p.GetZ()</td>
+                            <td><input @bind-value="@tableauRaw[i].X" @bind-value:event="onchange"></td>
+                            <td><input @bind-value="@tableauRaw[i].Y" @bind-value:event="onchange"></td>
+                            <td><input @bind-value="@tableauRaw[i].Z" @bind-value:event="onchange"></td> 
                         </tr>
                     }
                     </tbody>
@@ -56,16 +53,18 @@
             }
         </div>
         <div id="chart">
-            @if(this.bo & selected!=null){
-                <SfChart Title="@selected" Palettes="@palettes">
+            
+            @*Affichage du graphique selectionné*@
+            @if (this.bo & (this.selected != null))
+            {
+                <SfChart Title="@this.selected" Palettes="@palettes">
                     <ChartPrimaryXAxis Minimum="-180" Maximum="180" Interval="30" RangePadding="ChartRangePadding.Auto" CrossesAt="0"/>
                     <ChartPrimaryYAxis RangePadding="ChartRangePadding.Auto" Minimum="0" Maximum="1" CrossesAt="0"/>
 
-
                     <ChartSeriesCollection>
-                        @if (selected != null)
+                        @if (this.selected != null)
                         {
-                            <ChartSeries DataSource="@ants.SearchAntenneByName(selected).GetChartCartData()" XName="X" YName="Y"/>
+                            <ChartSeries DataSource="@Graphique.TransformRawToCart(tableauRaw)" XName="X" YName="Y"/>
                         }
                         else
                         {
@@ -75,20 +74,19 @@
                     </ChartSeriesCollection>
                 </SfChart>
             }
-            else if(!this.bo & selected!=null)
+            else if (!this.bo & (this.selected != null))
             {
-                <SfChart Title="@selected" Palettes="@palettes">
+                <SfChart Title="@this.selected" Palettes="@palettes">
                     <ChartPrimaryXAxis StartAngle="90" Minimum="0" Maximum="360" Interval="30"> </ChartPrimaryXAxis>
-                    <ChartPrimaryYAxis  Minimum="0" Maximum="1"/>
+                    <ChartPrimaryYAxis Minimum="0" Maximum="1"/>
                     <ChartSeriesCollection>
-                        <ChartSeries DataSource="@ants.SearchAntenneByName(selected).GetRawData()" XName="X" Width="2" Opacity="1" YName="Y"
+                        <ChartSeries DataSource="@tableauRaw" XName="X" Width="2" Opacity="1" YName="Y"
                                      Type="ChartSeriesType.Polar" DrawType="ChartDrawType.Spline">
 
                         </ChartSeries>
                     </ChartSeriesCollection>
                 </SfChart>
             }
-            
 
         </div>
     </div>
@@ -96,23 +94,96 @@
 
 
 @code {
-
+    //Attribut TRUE : cartesien FALSE : polaire
     private bool bo = true;
+
+    //Variable stockant toute les antennes du fichier Antennas
     private static Antennes ants = new Antennes();
 
-    private string selected = Graphique.ants.GetListe()[0].GetNom();
+    //Variable désignant l'antenne selectionnée
+    private string selected = Graphique.ants.GetFirst().GetNom();
+
+    //Liste des Points permettant l'affichage de l'Antenne "selected"
+    private List<Point> tableauRaw;
+
+    //Palette de couleur des graphiques
     public String[] palettes = new String[] { "#E94649", "#F6B53F", "#6FAAB0" };
     
+    //Compteur pour savoir la ligne à modifier
+    private int c = 0;
+    private string text = "disabled";
+    private bool enabled = false;
+
+    //Modification activé/ pas activé 
+
+    public void setEnabled()
+    {
+        if (!enabled)
+        {
+            this.enabled = !this.enabled;
+        }
+        if (enabled)
+        {
+            this.text = "";
+        }
+        else
+        {
+            this.text = "disabled";
+        }
+    }
+
+
+    //Méthode s'activant à l'appui du boutton Polar/Cartesian
     public void clickBtnChange()
     {
         this.bo = !bo;
     }
 
+    //Méthode se lancant au chargement de la page
+    protected override void OnInitialized()
+    {
+        this.SetTabRaw();
+    }
 
-    
+
+    //Permet de définir le tableauRaw des données
+    public void SetTabRaw()
+    {
+        this.tableauRaw=Graphique.ants.SearchAntenneByName(selected).GetRawData();
+    }
+
+
+    //Méthode statique permettant de transformer les donées du format "raw" au format "cartesien"
+    public static List<Point> TransformRawToCart(List<Point> init)
+    {
+        List<Point> Cart = new List<Point>();
+        for (int i = 0; i < init.Count()-1;i++)
+        {
+            int milieu = (init.Count() - 1) / 2;
+            if (i < milieu)
+            {
+                Cart.Add(new Point {X = init[i].GetX()-180, Y = init[milieu+i].GetY() , Z= init[milieu+i].GetZ()});
+            }
+            else
+            {
+                if (i == init.Count() - 2)
+                {
+                    Cart.Add(new Point {X = 180, Y = init[milieu].GetY(), Z = init[0].GetZ()});
+                }
+                else
+                {
+                    Cart.Add(new Point {X = init[i].GetX()-180, Y = init[i-milieu].GetY() , Z= init[i-milieu].GetZ()});
+                }
+            }
+        }
+        return Cart;
+    }
+
 
     //Classe Antenne ayant un Nom, un Chemin et un Contenu
-    internal class Antenne
+    //Une représentation "Raw" (données pures)
+    //Une représentation cartesienne
+    public class Antenne
     {
         //Attributs
         private string Nom { get; set; }
@@ -199,33 +270,32 @@
         {
             return this.ChartCartData;
         }
-
     }
 
 
     //Classe Antennes : stocke les Antennes présente dans le dossier sous forme d'une liste d'antenne
-    internal class Antennes
+    public class Antennes
     {
 
         private const string folderPath = @"C:\Users\DME\source\repos\ATOLL\ATOLL\Resources\Antennas\Antenna types";
         private List<Antenne> l { get; set; }
         
-
+        
         //Constructeur de Antennes
         public Antennes()
         {
             
             DirectoryInfo place = new DirectoryInfo(folderPath);
             FileInfo[] files = place.GetFiles();
-            l = new List<Antenne>();
+            this.l = new List<Antenne>();
             foreach(FileInfo file in files)
             {
                 string filePath = folderPath + "\\" + file.Name;
-                
                 Antenne x = new Antenne(file.Name, filePath, System.IO.File.ReadAllLines(filePath));
                 l.Add(x);
             }
             
+
         }
 
         //getter de la Liste
@@ -234,24 +304,29 @@
             return this.l;
         }
 
-
         //Méthode permettant de rechercher une antenne avec son Nom
         public Antenne SearchAntenneByName(string nom)
         {
             foreach(Antenne a in this.l)
             {
-                if (a.GetNom()==nom)
+                if (a.GetNom() == nom)
                 {
                     return a;
                 }
             }
             return null;
         }
+
+        public Antenne GetFirst()
+        {
+            return this.l[0];
+        }
+       
     }
 
 
-    //Classe représentant les points X et Y du Graphique    
-    internal class Point
+    //Classe représentant les points X et Y du Graphique . Z représente la Phase
+    public class Point
     {
         public double X { get; set;}
         public double Y { get; set; }
@@ -271,13 +346,21 @@
         {
             return this.Z;
         }
+        public void SetX(double x)
+        {
+            this.X=x;
+        }
+
+        public void SetY(double y)
+        {
+           this.Y=y;
+        }
+
+        public void SetZ(double z)
+        {
+            this.Z=z;
+        }
     }
-
-    
-    
-    
-   
-
 }
 
   

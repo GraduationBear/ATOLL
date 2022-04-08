@@ -62,6 +62,15 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <AndroidResource Remove="wwwroot\tools\**" />
+	  <Compile Remove="wwwroot\tools\**" />
+	  <Content Remove="wwwroot\tools\**" />
+	  <EmbeddedResource Remove="wwwroot\tools\**" />
+	  <None Remove="wwwroot\tools\**" />
+	  <Page Remove="wwwroot\tools\**" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<Content Remove="Properties\launchSettings.json" />
 	</ItemGroup>
 
@@ -69,6 +78,10 @@
 	  <PackageReference Include="Microsoft.Graphics.Win2D" Version="1.0.1" />
 	  <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.0.1" />
 	  <PackageReference Include="Syncfusion.Blazor.Charts" Version="20.1.0.47" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PRIResource Remove="wwwroot\tools\**" />
 	</ItemGroup>
 
 </Project>
