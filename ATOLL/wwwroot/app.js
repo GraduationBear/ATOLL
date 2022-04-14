@@ -1,4 +1,4 @@
 ﻿
-document.getElementById("#caca").addEventListener('click', () => {
+document.getElementById("#").addEventListener('click', () => {
     this.inner
 })

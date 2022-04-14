@@ -1,20 +1,18 @@
 ﻿@page "/graphique"
-
+@inject NavigationManager NavigationManager
+@using System.Dynamic;
 
 <div id="ensemble">
     <div id="haut">
-        <select class="form-select form-select-sm" aria-label=".form-select-sm example" id="antenne" @bind="@this.selected" @onclick="SetTabRaw">
-                @*Affichage des fichiers dans le menu déroulant*@
-                @foreach (Antenne a in Graphique.ants.GetListe())
-                {
-                    <option value="@a.GetNom()">@a.GetNom()</option>
-                }
-            
-        </select>
+        @*Affichage de la dropdown list*@
+        <SfDropDownList TValue="string" Placeholder="Choisir une antenne" TItem="string" @bind-Value="@selected" DataSource="@ants.GetNoms()" Width="200px">
+            <DropDownListEvents TItem="string" TValue="string" ValueChange="SetTabs" ></DropDownListEvents>
+            <DropDownListFieldSettings Value="Name"></DropDownListFieldSettings>
+        </SfDropDownList>
         <div id="onglets">
             <nav>
                 @*Affichage du bouton en fonction du contexte*@
-                @if (this.bo)
+                @if (this.swap)
                 {
                     <button class="btn btn-primary" @onclick="clickBtnChange">Polaire</button>
                 }
@@ -25,72 +23,75 @@
             </nav>
         </div>
     </div>
+     
     <div id="tabgraph" class="border-top-0">
+        
         <div id="table">
-            
+                @*Affichage du tableau de valeurs*@
+                <SfGrid DataSource="@tableauRaw" AllowSorting="true" Toolbar="@ToolbarItems">
+                    <GridEvents OnActionComplete="refresh" TValue="ExpandoObject"></GridEvents>
+                    <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" Mode="EditMode.Normal"></GridEditSettings>
+                    <GridColumns>
+                        <GridColumn Field="count"
+                                    HeaderText="N°"
+                                    TextAlign="TextAlign.Center"
+                                    IsPrimaryKey="true">
 
-            @if (this.selected != null)
-            {
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>AZ</th>
-                            <th>Amp</th>
-                            <th>Phase</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @*Affichage du tableau de données représentant le graphique à côté*@
-                        @for(int i=0;i<tableauRaw.Count()-1;i++)
-                        {
-                            <tr>
+                        </GridColumn>
+                        <GridColumn Field="X"
+                                    HeaderText="AZ"
+                                    TextAlign="TextAlign.Center"
                                     
-                                    <td><input type="text" value="@tableauRaw[i].X" @oninput="@(e => change(e,i, "X"))"></td>
-                                    <td><input type="text" value="@tableauRaw[i].Y" @oninput="@(e => change(e,i, "Y"))"></td>
-                                    <td><input type="text" value="@tableauRaw[i].Z" @oninput="@(e => change(e,i, "Z"))"></td> 
-                                
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            }
+                                    >
+                        </GridColumn>  
+                        <GridColumn Field="Y"
+                                    HeaderText="Amp"
+                                    TextAlign="TextAlign.Center"
+                                    >
+                        </GridColumn>
+                        <GridColumn Field="Z"
+                                    HeaderText="Phase"
+                                    TextAlign="TextAlign.Center"
+                                    >
+                        </GridColumn>
+                    </GridColumns>
+                </SfGrid>
+        
         </div>
         <div id="chart">
             
             @*Affichage du graphique selectionné*@
-            @if (this.bo & (this.selected != null))
+            @if (this.swap)
             {
-                <SfChart @ref="Chart" Title="@this.selected" Palettes="@palettes">
-                    <ChartPrimaryXAxis Minimum="-180" Maximum="180" Interval="30" RangePadding="ChartRangePadding.Auto" CrossesAt="0"/>
-                    <ChartPrimaryYAxis RangePadding="ChartRangePadding.Auto" Minimum="0" Maximum="1" CrossesAt="0"/>
+                <SfChart @ref="@Chart" Title="@selected" Palettes="@palettes">
+                    <ChartPrimaryXAxis Minimum="-180" Maximum="180" Interval="30" CrossesAt="0"/>
+                    <ChartPrimaryYAxis Minimum="0" Maximum="1" CrossesAt="0"/>
 
                     <ChartSeriesCollection>
-                        @if (this.selected != null)
-                        {
-                            <Syncfusion.Blazor.Charts.ChartSeries DataSource="@Graphique.TransformRawToCart(tableauRaw)" XName="X" YName="Y"/>
-                        }
-                        else
-                        {
-                            <Syncfusion.Blazor.Charts.ChartSeries XName="X" YName="Y"/>
-                        }
-
+                        
+                            <Syncfusion.Blazor.Charts.ChartSeries DataSource="@tableauCart" XName="X" YName="Y" DrawType="ChartDrawType.Spline">
+                                    <ChartSeriesAnimation Enable="false"></ChartSeriesAnimation>
+                            </Syncfusion.Blazor.Charts.ChartSeries>
+                        
+                        
                     </ChartSeriesCollection>
                 </SfChart>
             }
-            else if (!this.bo & (this.selected != null))
+            else if (!this.swap)
             {
-                <SfChart @ref="Chart" Title="@this.selected" Palettes="@palettes">
+                <SfChart @ref="@Chart" Title="@selected" Palettes="@palettes">
                     <ChartPrimaryXAxis StartAngle="90" Minimum="0" Maximum="360" Interval="30"> </ChartPrimaryXAxis>
                     <ChartPrimaryYAxis Minimum="0" Maximum="1"/>
                     <ChartSeriesCollection>
                         <Syncfusion.Blazor.Charts.ChartSeries DataSource="@tableauRaw" XName="X" Width="2" Opacity="1" YName="Y"
                                      Type="ChartSeriesType.Polar" DrawType="ChartDrawType.Spline">
-
+                                     
+                                     <ChartSeriesAnimation Enable="false"></ChartSeriesAnimation>
                         </Syncfusion.Blazor.Charts.ChartSeries>
+                        
                     </ChartSeriesCollection>
                 </SfChart>
             }
-
         </div>
     </div>
 </div>
@@ -98,90 +99,236 @@
 
 @code {
 
+    @*Références aux graphiques*@
+    SfChart Chart;
+
+    @*Barre d'outils au dessus du tableau de données*@
+    public string[] ToolbarItems = new string[] { "Edit", "Update", "Cancel" };
 
 
-    SfChart Chart; 
+    //Attribut "swap"  TRUE : affiche le cartesien
+    //          FALSE : affiche le  polaire
+    private bool swap = true;
 
-    public void change(ChangeEventArgs e, int i, string val)
-    {
-        var result = e.Value;
-        var ci = (CultureInfo) CultureInfo.CurrentCulture.Clone();
-        ci.NumberFormat.NumberDecimalSeparator = ".";
-        if(val == "X")
-        {
-            tableauRaw[i].SetX(Convert.ToDouble(e.Value,ci));
-        }else if(val == "Y")
-        {
-            tableauRaw[i].SetY(Convert.ToDouble(e.Value,ci));
-        }else if(val == "Z")
-        {
-            tableauRaw[i].SetZ(Convert.ToDouble(e.Value,ci));
-        }
-        Chart.RefreshLiveData(); 
-        
-        
-    }
-
-    //Attribut TRUE : cartesien FALSE : polaire
-    private bool bo = true;
-
-    //Variable stockant toute les antennes du fichier Antennas
-    private static Antennes ants = new Antennes();
+    //Variable stockant les antennes du fichier Antennas
+    private Antennes ants = new Antennes();
 
     //Variable désignant l'antenne selectionnée
-    private string selected = Graphique.ants.GetFirst().GetNom();
-
-    //Liste des Points permettant l'affichage de l'Antenne "selected"
-    private List<Point> tableauRaw;
+    private string selected;
 
     //Palette de couleur des graphiques
     public String[] palettes = new String[] { "#E94649", "#F6B53F", "#6FAAB0" };
 
+    //Liste contenant respectivement les données brutes
+    public List<ExpandoObject> tableauRaw{ get; set; }= new List<ExpandoObject>();
 
-    //Méthode s'activant à l'appui du boutton Polar/Cartesian
-    public void clickBtnChange()
-    {
-        this.bo = !bo;
-    }
+    //Liste contenant les données traitées pour être afficher en cartesien
+    private List<ExpandoObject> tableauCart{ get;set; } = new List<ExpandoObject>();
 
-    //Méthode se lancant au chargement de la page
+
+
+    @*Redefinition de la méthode OnInitialized, qui se lance au chargement de la page*@
     protected override void OnInitialized()
     {
-        this.SetTabRaw();
-    }
+        //Au premier chargement, on affiche le premier graphique de la liste
+        this.selected = ants.GetFirst().GetNom();
+
+        //On prend son contenu dans un tableau de string
+        string[] cnt = ants.SearchAntenneByName(selected).GetContent();
+
+        //On prévient avec cette variable "ci" que notre fichier contient des "." et on des ","
+        var ci = (CultureInfo)CultureInfo.CurrentCulture.Clone();
+        ci.NumberFormat.NumberDecimalSeparator = ".";
+
+        //Expression régulière permettant de conserver les chiffres et les points par groupes
+        string pattern = @"([0-9\.\S])+";
+        Regex rgx = new Regex(pattern);
 
 
-    //Permet de définir le tableauRaw des données
-    public void SetTabRaw()
-    {
-        this.tableauRaw=Graphique.ants.SearchAntenneByName(selected).GetRawData();
-    }
+        //On récupère le nombre de points
+        int maxindex = ants.SearchAntenneByName(selected).GetTaille();
 
-
-    //Méthode statique permettant de transformer les donées du format "raw" au format "cartesien"
-    public static List<Point> TransformRawToCart(List<Point> init)
-    {
-        List<Point> Cart = new List<Point>();
-        for (int i = 0; i < init.Count()-1;i++)
+        //Remplissage du tableauRaw par des ExpandoObject représentant nos points(x,y,z)
+        this.tableauRaw = Enumerable.Range(5,maxindex).Select((i) =>
         {
-            int milieu = (init.Count() - 1) / 2;
-            if (i < milieu)
+            //On proède ligne par ligne
+            string str = cnt[i];
+
+            double az = double.Parse(rgx.Matches(str)[0].Value, ci);
+            double amp = double.Parse(rgx.Matches(str)[1].Value, ci);
+            double phase = double.Parse(rgx.Matches(str)[2].Value, ci);
+
+            dynamic dynamicObj = new ExpandoObject();
+            dynamicObj.count = i - 5;
+            dynamicObj.X = az;
+            dynamicObj.Y = amp;
+            dynamicObj.Z = phase;
+
+            return dynamicObj;
+        }).Cast<ExpandoObject>().ToList<ExpandoObject>();
+
+        this.setCartesien();
+
+    }
+
+    @*méthode permettant de définir le tableau cartésien*@
+    public void setCartesien()
+    {
+
+        //On récupère l'index à la moitié 
+        int moitie = (tableauRaw.Count() )/ 2;
+
+        //On itère en injectant dans le tableauCart les valeurs que l'on modifie
+        this.tableauCart = Enumerable.Range(0,tableauRaw.Count()+1).Select((i) =>
+        {
+
+            dynamic dynamicObj = new ExpandoObject();
+
+
+        //Avant la moitié de l'index 
+            if (i < moitie)
             {
-                Cart.Add(new Point {X = init[i].GetX()-180, Y = init[milieu+i].GetY() , Z= init[milieu+i].GetZ()});
-            }
+                foreach (KeyValuePair<string, object> kvp in tableauRaw[moitie+i])
+                {
+
+                    if (kvp.Key == "Y")
+                    {
+                        dynamicObj.Y = (double)kvp.Value;
+                    }
+                    else if (kvp.Key == "Z")
+                    {
+                        dynamicObj.Z = (double)kvp.Value;
+                    }
+                }
+                foreach (KeyValuePair<string, object> kvp in tableauRaw[i])
+                {
+
+                    if (kvp.Key == "X")
+                    {
+                        dynamicObj.X = (double)kvp.Value - 180;
+                    }
+                    if (kvp.Key == "count")
+                    {
+                        dynamicObj.count = (int)kvp.Value;
+                    }
+                }
+            }//Après la moitié de l'index
+            else if(i>=moitie && i<tableauRaw.Count())
+            {
+
+                foreach (KeyValuePair<string, object> kvp in tableauRaw[i])
+                {
+                    if (kvp.Key == "X")
+                    {
+                        dynamicObj.X = (double)kvp.Value - 180;
+                    }
+                    if (kvp.Key == "count")
+                    {
+                        dynamicObj.count = (int)kvp.Value;
+                    }
+
+                }
+                foreach (KeyValuePair<string, object> kvp in tableauRaw[i-moitie])
+                {  
+                    if (kvp.Key == "Y")
+                    {
+                        dynamicObj.Y = (double)kvp.Value;
+                    }
+                    else if (kvp.Key == "Z")
+                    {
+                        dynamicObj.Z = (double)kvp.Value;
+                    }
+                }
+            }//On rajoute un dernier point 
             else
             {
-                if (i == init.Count() - 2)
+                foreach (KeyValuePair<string, object> kvp in tableauRaw[i-1])
                 {
-                    Cart.Add(new Point {X = 180, Y = init[milieu].GetY(), Z = init[0].GetZ()});
+
+                    
+                     if (kvp.Key == "X")
+                    {
+                        dynamicObj.X = (double)kvp.Value - 175;
+                    
+                    }
+                    
+                    if (kvp.Key == "count")
+                    {
+                        dynamicObj.count = (int)kvp.Value-1;
+                    }
+
                 }
-                else
-                {
-                    Cart.Add(new Point {X = init[i].GetX()-180, Y = init[i-milieu].GetY() , Z= init[i-milieu].GetZ()});
+                foreach (KeyValuePair<string, object> kvp in tableauRaw[moitie])
+                {  
+                    if (kvp.Key == "Y")
+                    {
+                        dynamicObj.Y = (double)kvp.Value;
+                    }
+                    else if (kvp.Key == "Z")
+                    {
+                        dynamicObj.Z = (double)kvp.Value;
+                    }
                 }
             }
-        }
-        return Cart;
+
+            return dynamicObj;
+        }).Cast<ExpandoObject>().ToList<ExpandoObject>();
+    }
+
+
+
+    @*méthode permettant le rafraichissement des graphiques*@
+    public void refresh(ActionEventArgs<ExpandoObject> args)
+    {
+
+        this.setCartesien();
+        Chart.RefreshAsync();
+
+    }
+
+    @*Change la valeur de swap*@
+    public void clickBtnChange()
+    {
+        //Méthode s'activant à l'appui du boutton Polar/Cartesien
+        this.swap = !swap;
+
+    }
+
+
+    //Permet de définir le tableauRaw et tableauCart des données lors du binding dans le tableau
+    public void SetTabs(ChangeEventArgs<string,string> args)
+    {
+
+        string[] cnt = ants.SearchAntenneByName(selected).GetContent();
+        this.tableauRaw = new List<ExpandoObject>();
+        var ci = (CultureInfo)CultureInfo.CurrentCulture.Clone();
+        ci.NumberFormat.NumberDecimalSeparator = ".";
+        string pattern = @"([0-9\.\S])+";
+        Regex rgx = new Regex(pattern);
+        int maxindex = ants.SearchAntenneByName(selected).GetTaille();
+        this.tableauRaw = Enumerable.Range(5,maxindex).Select((i) =>
+        {
+
+
+            string str = cnt[i];
+
+            double az = double.Parse(rgx.Matches(str)[0].Value, ci);
+            double amp = double.Parse(rgx.Matches(str)[1].Value, ci);
+            double phase = double.Parse(rgx.Matches(str)[2].Value, ci);
+
+
+            dynamic dynamicObj = new ExpandoObject();
+            dynamicObj.count = i - 5;
+            dynamicObj.X = az;
+            dynamicObj.Y = amp;
+            dynamicObj.Z = phase;
+
+            return dynamicObj;
+        }).Cast<ExpandoObject>().ToList<ExpandoObject>();
+
+
+
+        this.setCartesien();
     }
 
 
@@ -194,61 +341,29 @@
         private string Nom { get; set; }
         private string Path { get; set; }
         private string[] Contenu { get; set; }
-
-        private List<Point> RawData;
-        private List<Point> ChartCartData;
+        private int taille { get; set; }
+        
 
         //Constructeur de la classe Antenne
         public Antenne(string nom, string path, string[] contenu)
         {
             this.Nom = nom;
+
             this.Path = path;
+
+            string pat = @"([^a-z ])([.0-9])+";
+            Regex rgx = new Regex(pat);
+            this.taille = int.Parse(rgx.Matches(contenu[2])[0].Value);
+
+
             this.Contenu = contenu;
-            this.RawData = new List<Point>();
-            this.ChartCartData = new List<Point>();
 
-            //remplissage du tableau brut
-            for (int i = 5; i < this.Contenu.Length - 1; i++)
-            {
+            
+        }
 
-                string pattern = @"([0-9\.\S])+";
-                Regex rgx = new Regex(pattern);
-                string str = this.Contenu[i];
-                var ci = (CultureInfo) CultureInfo.CurrentCulture.Clone();
-                ci.NumberFormat.NumberDecimalSeparator = ".";
-
-                double az = double.Parse(rgx.Matches(str)[0].Value, ci);
-                double amp = double.Parse(rgx.Matches(str)[1].Value, ci);
-                double phase = double.Parse(rgx.Matches(str)[2].Value, ci);
-
-                RawData.Add(new Point {X = az, Y = amp , Z= phase});
-
-                if (i == this.Contenu.Length - 2)
-                {
-                    RawData.Add(new Point {X = 360, Y = RawData[0].GetY() , Z=phase});
-                }
-            }
-
-            //Remplissage du tableau cartesien
-            for (int i = 0; i < RawData.Count()-1;i++)
-            {
-                int milieu = (RawData.Count() - 1) / 2;
-                if (i < milieu)
-                {
-                    ChartCartData.Add(new Point {X = RawData[i].GetX()-180, Y = RawData[milieu+i].GetY() , Z= RawData[milieu+i].GetZ()});
-                }
-                else
-                {
-                    if (i == RawData.Count() - 2)
-                    {
-                        ChartCartData.Add(new Point {X = 180, Y = RawData[milieu].GetY(), Z = RawData[0].GetZ()});
-                    }
-                    else
-                    {
-                        ChartCartData.Add(new Point {X = RawData[i].GetX()-180, Y = RawData[i-milieu].GetY() , Z= RawData[i-milieu].GetZ()});
-                    }
-                }
-            }
+        public int GetTaille()
+        {
+            return this.taille;
         }
 
         public string GetNom()
@@ -265,23 +380,15 @@
         {
             return this.Contenu;
         }
-
-        public List<Point> GetRawData()
-        {
-            return this.RawData;
-        }
-
-        public List<Point> GetChartCartData()
-        {
-            return this.ChartCartData;
-        }
     }
+
+
 
 
     //Classe Antennes : stocke les Antennes présente dans le dossier sous forme d'une liste d'antenne
     public class Antennes
     {
-        private const string folderPath = @"C:\Users\User\Source\Repos\GraduationBear\ATOLL\ATOLL\Resources\Antennas\Antenna types";
+        private const string folderPath = @"C:\Users\DME\source\repos\ATOLL\ATOLL\Resources\Antennas\Antenna types";
         private List<Antenne> l { get; set; }
 
 
@@ -305,6 +412,16 @@
             return this.l;
         }
 
+        public List<string> GetNoms()
+        {
+            List<string> noms = new List<string>();
+            foreach(Antenne a in this.l)
+            {
+                noms.Add(a.GetNom());
+            }
+            return noms;
+        }
+
         //Méthode permettant de rechercher une antenne avec son Nom
         public Antenne SearchAntenneByName(string nom)
         {
@@ -324,42 +441,6 @@
         }
     }
 
-    //Classe représentant les points X et Y du Graphique . Z représente la Phase
-    public class Point
-    {
-        public double X { get; set;}
-        public double Y { get; set; }
-        public double Z { get; set; }
-
-        public double GetX()
-        {
-            return this.X;
-        }
-
-        public double GetY()
-        {
-            return this.Y;
-        }
-
-        public double GetZ()
-        {
-            return this.Z;
-        }
-        public void SetX(double x)
-        {
-            this.X=x;
-        }
-
-        public void SetY(double y)
-        {
-            this.Y=y;
-        }
-
-        public void SetZ(double z)
-        {
-            this.Z=z;
-        }
-    }
 }
 
   

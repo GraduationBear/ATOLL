@@ -66,45 +66,37 @@ a, .btn-link {
 #tabgraph {
 	display: flex;
 	flex-direction: row;
-	justify-content: center;
-    height: 75vh;
+	justify-content: space-evenly;
+    height: 77vh;
     
 }
 
 #table{
 	
-	width:30%;
+	width:40%;
 	overflow-y:scroll;
 
 }
 
 #chart{
-	width:70%;
+	padding: 10px;
+	width:60%;
 }
 
-#table th,td{
-	text-align:center;	
-	
-}
 
-.form-select{
-	margin-bottom: 20px;
-}
 #ensemble {
-    width: 100%;
+	width: 100%;
 }
 
 #haut {
     display: flex;
     flex-direction: row;	
-    justify-content: space-between;
+    align-items:center;
 }
 
 #antenne {
     width: 20%;
 }
 
-input {
-    width: 50%;
-}
+
 

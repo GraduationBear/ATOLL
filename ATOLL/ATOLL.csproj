@@ -76,8 +76,11 @@
 
 	<ItemGroup>
 	  <PackageReference Include="Microsoft.Graphics.Win2D" Version="1.0.1" />
-	  <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.0.1" />
-	  <PackageReference Include="Syncfusion.Blazor.Charts" Version="20.1.0.47" />
+	  <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.1.0-preview1" />
+	  <PackageReference Include="Syncfusion.Blazor.Charts" Version="20.1.0.48" />
+	  <PackageReference Include="Syncfusion.Blazor.DropDowns" Version="20.1.0.48" />
+	  <PackageReference Include="Syncfusion.Blazor.Grid" Version="20.1.0.48" />
+	  <PackageReference Include="Syncfusion.Blazor.Themes" Version="20.1.0.48" />
 	</ItemGroup>
 
 	<ItemGroup>
